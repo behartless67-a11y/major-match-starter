@@ -1,14 +1,14 @@
 name: macOS Build (Electron, unsigned)
 
 on:
-  workflow_dispatch: {}   # manual run button in the Actions tab
+  workflow_dispatch: {}   # run manually from the Actions tab
 
 jobs:
   build-mac:
     runs-on: macos-latest
     strategy:
       matrix:
-        arch: [arm64]     # start with Apple Silicon; add x64 later if you want
+        arch: [arm64]     # add x64 later if you want both
 
     steps:
       - name: Checkout
@@ -21,10 +21,27 @@ jobs:
           cache: 'npm'
 
       - name: Install deps
-        run: npm ci
+        run: npm ci || npm i
 
       - name: Build web bundle (Vite)
         run: npm run build
+
+      # Make build/icon.icns from your PNG
+      - name: Create mac .icns from PNG
+        run: |
+          mkdir -p build/Icon.iconset
+          sips -z 16 16     build/BattenMajorMatch-icon-1024.png --out build/Icon.iconset/icon_16x16.png
+          sips -z 32 32     build/BattenMajorMatch-icon-1024.png --out build/Icon.iconset/icon_16x16@2x.png
+          sips -z 32 32     build/BattenMajorMatch-icon-1024.png --out build/Icon.iconset/icon_32x32.png
+          sips -z 64 64     build/BattenMajorMatch-icon-1024.png --out build/Icon.iconset/icon_32x32@2x.png
+          sips -z 128 128   build/BattenMajorMatch-icon-1024.png --out build/Icon.iconset/icon_128x128.png
+          sips -z 256 256   build/BattenMajorMatch-icon-1024.png --out build/Icon.iconset/icon_128x128@2x.png
+          sips -z 256 256   build/BattenMajorMatch-icon-1024.png --out build/Icon.iconset/icon_256x256.png
+          sips -z 512 512   build/BattenMajorMatch-icon-1024.png --out build/Icon.iconset/icon_256x256@2x.png
+          sips -z 512 512   build/BattenMajorMatch-icon-1024.png --out build/Icon.iconset/icon_512x512.png
+          cp build/BattenMajorMatch-icon-1024.png build/Icon.iconset/icon_512x512@2x.png
+          iconutil -c icns build/Icon.iconset -o build/icon.icns
+          ls -l build/icon.icns
 
       - name: Build DMG (unsigned)
         env:
