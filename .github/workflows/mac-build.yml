@@ -1,14 +1,14 @@
 name: macOS Build (Electron, unsigned)
 
 on:
-  workflow_dispatch: {}
+  workflow_dispatch: {}   # run manually from Actions tab
 
 jobs:
   build-mac:
     runs-on: macos-latest
     strategy:
       matrix:
-        arch: [arm64]            # add x64 later if you need both
+        arch: [arm64]     # add x64 if you want Intel too: [arm64, x64]
 
     steps:
       - name: Checkout
@@ -26,7 +26,7 @@ jobs:
       - name: Build web bundle (Vite)
         run: npm run build
 
-      # Create build/icon.icns ONLY if your PNG exists in the repo
+      # Create build/icon.icns from your PNG IF it exists (otherwise skip)
       - name: Create mac .icns from PNG (if present)
         if: ${{ hashFiles('build/BattenMajorMatch-icon-1024.png') != '' }}
         shell: bash
@@ -35,4 +35,38 @@ jobs:
           sips -z 16 16     build/BattenMajorMatch-icon-1024.png --out build/Icon.iconset/icon_16x16.png
           sips -z 32 32     build/BattenMajorMatch-icon-1024.png --out build/Icon.iconset/icon_16x16@2x.png
           sips -z 32 32     build/BattenMajorMatch-icon-1024.png --out build/Icon.iconset/icon_32x32.png
-          sips
+          sips -z 64 64     build/BattenMajorMatch-icon-1024.png --out build/Icon.iconset/icon_32x32@2x.png
+          sips -z 128 128   build/BattenMajorMatch-icon-1024.png --out build/Icon.iconset/icon_128x128.png
+          sips -z 256 256   build/BattenMajorMatch-icon-1024.png --out build/Icon.iconset/icon_128x128@2x.png
+          sips -z 256 256   build/BattenMajorMatch-icon-1024.png --out build/Icon.iconset/icon_256x256.png
+          sips -z 512 512   build/BattenMajorMatch-icon-1024.png --out build/Icon.iconset/icon_256x256@2x.png
+          sips -z 512 512   build/BattenMajorMatch-icon-1024.png --out build/Icon.iconset/icon_512x512.png
+          cp build/BattenMajorMatch-icon-1024.png build/Icon.iconset/icon_512x512@2x.png
+          iconutil -c icns build/Icon.iconset -o build/icon.icns
+          ls -l build/icon.icns
+
+      - name: Skip icon generation (no PNG found)
+        if: ${{ hashFiles('build/BattenMajorMatch-icon-1024.png') == '' }}
+        run: echo "No build/BattenMajorMatch-icon-1024.png in repo; building with default icon."
+
+      - name: Build DMG (unsigned, no publish)
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'      # don't sign
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}     # satisfies CI checks
+        run: npx electron-builder --mac dmg --${{ matrix.arch }} --publish=never -c.mac.identity=null
+
+      - name: List build outputs
+        run: |
+          echo "== dist_electron =="
+          ls -lah dist_electron || true
+          echo "== recursive list (first 3 levels) =="
+          find dist_electron -maxdepth 3 -type f -print || true
+
+      - name: Upload DMG artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Batten-Major-Match-${{ matrix.arch }}
+          path: |
+            dist_electron/*.dmg
+            dist_electron/**/*.dmg
+          if-no-files-found: error
