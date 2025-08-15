@@ -1,0 +1,38 @@
+name: macOS Build (Electron, unsigned)
+
+on:
+  workflow_dispatch: {}   # manual run button in the Actions tab
+
+jobs:
+  build-mac:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        arch: [arm64]     # start with Apple Silicon; add x64 later if you want
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Build web bundle (Vite)
+        run: npm run build
+
+      - name: Build DMG (unsigned)
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'   # don't try to sign
+        run: npx electron-builder --mac dmg --${{ matrix.arch }} -c.mac.identity=null
+
+      - name: Upload DMG artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Batten-Major-Match-${{ matrix.arch }}
+          path: dist_electron/*.dmg
