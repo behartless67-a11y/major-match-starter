@@ -1,14 +1,14 @@
 name: macOS Build (Electron, unsigned)
 
 on:
-  workflow_dispatch: {}   # run manually from the Actions tab
+  workflow_dispatch: {}
 
 jobs:
   build-mac:
     runs-on: macos-latest
     strategy:
       matrix:
-        arch: [arm64]     # add x64 later if you want both
+        arch: [arm64]   # add x64 later if you need both
 
     steps:
       - name: Checkout
@@ -26,7 +26,7 @@ jobs:
       - name: Build web bundle (Vite)
         run: npm run build
 
-      # Make build/icon.icns from your PNG
+      # Create build/icon.icns from your PNG
       - name: Create mac .icns from PNG
         run: |
           mkdir -p build/Icon.iconset
@@ -43,10 +43,11 @@ jobs:
           iconutil -c icns build/Icon.iconset -o build/icon.icns
           ls -l build/icon.icns
 
-      - name: Build DMG (unsigned)
+      - name: Build DMG (unsigned, no publish)
         env:
-          CSC_IDENTITY_AUTO_DISCOVERY: 'false'   # don't try to sign
-        run: npx electron-builder --mac dmg --${{ matrix.arch }} -c.mac.identity=null
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'        # don't sign
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}       # satisfy electron-builder
+        run: npx electron-builder --mac dmg --${{ matrix.arch }} -c.mac.identity=null -c.publish=never
 
       - name: Upload DMG artifact
         uses: actions/upload-artifact@v4
