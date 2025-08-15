@@ -1,0 +1,8 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Light UI polish to match your design */
+:root { color-scheme: light; }
+html, body, #root { height: 100%; }
+body { background: #f6f7fb; }

@@ -1,0 +1,12 @@
+# Node/Electron/Vite
+node_modules/
+dist/
+dist_electron/
+*.log
+.npm/
+.vscode/
+.DS_Store
+
+# OS/build caches
+electron-builder.yml
+src-tauri/
